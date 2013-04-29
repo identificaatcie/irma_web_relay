@@ -107,18 +107,17 @@ public class RelayWrite extends HttpServlet {
 		
 		if (pathParts.length == 0) {
 			// A create channel request
-			String channelID1 = generateChannelID();
-			String channelID2 = generateChannelID();
+			String channelID = generateChannelID();
 			ChannelCreationResponse creationResponse = new ChannelCreationResponse();
-			creationResponse.qr_url = getBaseURL(request) + RELAYWRITESUBPATH + "/" + channelID2 + "/qr";
-			creationResponse.channel_read_url = getBaseURL(request) + RELAYREADSUBPATH + "/" + channelID2;
-			creationResponse.channel_write_url = getBaseURL(request) + RELAYWRITESUBPATH + "/" + channelID1;
+			creationResponse.read_url = getBaseURL(request) + RELAYREADSUBPATH + "/" + channelID;
+			creationResponse.write_url = getBaseURL(request) + RELAYWRITESUBPATH + "/" + channelID;
+			creationResponse.qr_url = getBaseURL(request) + RELAYWRITESUBPATH + "/" + channelID + "/qr";
 			Gson gson = new GsonBuilder().create();
 			response.setContentType("application/json");
 			response.getWriter().print(gson.toJson(creationResponse));
 		} else if (pathParts.length == 1) {
 			// A post to a channel
-			String channelID = pathParts[1];
+			String channelID = pathParts[0];
 			// Read the message
 			int contentLength = request.getContentLength();
 			if (contentLength > MAXMESSAGESIZE) {
@@ -136,8 +135,8 @@ public class RelayWrite extends HttpServlet {
 	}
 
 	public class ChannelCreationResponse {
+		String read_url;
+		String write_url;
 		String qr_url;
-		String channel_read_url;
-		String channel_write_url;
 	}
 }
