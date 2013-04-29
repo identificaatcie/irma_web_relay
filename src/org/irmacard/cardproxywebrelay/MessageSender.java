@@ -115,8 +115,7 @@ public class MessageSender implements Runnable{
             if (oldConnection != null) {
             	// If there is already someone listening, stop that and replace it
             	// with the new one.
-            	oldConnection.getWriter().flush();
-            	oldConnection.getWriter().close();
+            	oldConnection.reset();
             }
             connectionMap.put(channelID, connection);
 		}
