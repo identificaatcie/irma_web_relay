@@ -26,11 +26,6 @@ public class RelayRead extends HttpServlet implements CometProcessor {
     public RelayRead() {
         super();
     }
-    
-    
-    public void init() throws ServletException {
-
-    }
 
     public void destroy() {
     	MessageSender.stopThread();
@@ -51,24 +46,17 @@ public class RelayRead extends HttpServlet implements CometProcessor {
     public void event(CometEvent event) throws IOException {
     	String path = event.getHttpServletRequest().getPathInfo();
     	String channelID = path.substring(1);
-    	String method = event.getHttpServletRequest().getMethod();
-    	log("Channel ID: " + channelID);
     	HttpServletRequest request = event.getHttpServletRequest();
         HttpServletResponse response = event.getHttpServletResponse();
         if (event.getEventType() == CometEvent.EventType.BEGIN) {
-            log("Begin for session: " + request.getSession(true).getId());
             MessageSender.AddListener(channelID, response);
-
         } else if (event.getEventType() == CometEvent.EventType.ERROR) {
-            log("Error for session: " + request.getSession(true).getId());
             MessageSender.RemoveListener(channelID);
             event.close();
         } else if (event.getEventType() == CometEvent.EventType.END) {
-            log("End for session: " + request.getSession(true).getId());
             MessageSender.RemoveListener(channelID);
             event.close();
         } else if (event.getEventType() == CometEvent.EventType.READ) {
-        	log("Reading!");
             InputStream is = request.getInputStream();
             byte[] buf = new byte[512];
             do {
@@ -87,7 +75,7 @@ public class RelayRead extends HttpServlet implements CometProcessor {
     
 	private void error(CometEvent event, HttpServletRequest request,
 			HttpServletResponse response) {
-		// TODO Auto-generated method stub
+		// TODO Check if this needs to be handled
 		
 	}
 
