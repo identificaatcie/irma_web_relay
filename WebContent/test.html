@@ -4,25 +4,92 @@
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <title>Web relay test page</title>
   <script src="js/jquery.js" type="text/javascript"></script>
+  <script src="js/channel.js" type="text/javascript"></script>
 </head>
 <body>
 <h1>Web Relay test page</h1>
+<input type="checkbox" id="showQR" name="showQR" value="Yes">Show QR<br>
 <button id="create">Create channel</button>
 <div id="qrplaceholder"></div>
+
+
+<h1>A</h1>
+<input id="inputA"/>
+<button id="sendA">Send!</button>
+<ul id="listA">
+</ul>
+<h1>B</h1>
+<input id="inputB"/>
+<button id="sendB">Send!</button>
+<ul id="listB">
+</ul>
  <script>
-    $(function() {
-    	$("#create").on("click",function(event) {
-    		$.ajax({
-    			url : "/cardproxy_web_relay/w",
-    			contentType : 'application/json',
-    			type : 'POST',
-    			success: function(data) {
-    				console.log(data);
-    				$("#qrplaceholder").html('<img src="'+ data.qr_url + '">' );
-    			}
-    		});
-    	});
-    });
-</script>
+
+
+		var showChannelOutput = function(id, data) {
+			$(id).append(JSON.stringify(data));
+		}
+		var channelA = {}, 
+			channelB = {};
+		var setupA = function() {
+			
+		}
+		
+		var setupB = function(read_url) {
+			var readChannel = Channel.fromReadURL(read_url),
+				writeChannelAvailable = false,
+				writeChannel = {};
+			readChannel.listen(function(data) {
+				if (!writeChannelAvailable) {
+					var info = JSON.parse(data);
+					console.log("info: ", info);
+					writeChannel = Channel.fromWriteURL(info.write_url);
+					writeChannelAvailable = true;
+					$("#sendB").on("click", function(event) {
+						console.log("sendB?");
+						writeChannel.send($("#inputB").val());
+						$("#inputB").val("");
+					});
+				} else {
+					$("#listB").prepend("<li><pre>" + data + "</pre></li>");
+				}
+				
+			});
+		}
+		$(function() {
+			var channelBaseURL = "/cardproxy_web_relay/w";
+			$("#create").on(
+					"click",
+					function(event) {
+						Channel.setup(channelBaseURL, function(channel) {
+							console.log("Created output channel ", channel);
+							channelA = channel;
+							channelA.listen(function(data) {
+								$("#listA").prepend("<li><pre>" + data + "</pre></li>");
+							});
+							Channel.setup(channelBaseURL, function(channel) {
+								console.log("Created input channel ", channel);
+								channelB = channel;
+								channelB.send(JSON.stringify({write_url: channelA.write_url}));
+								
+								if ($('#showQR').is(":checked")) {
+									$("#qrplaceholder").html(
+											'<img src="'+ channelB.qr_url + '">');
+								} else {
+									setupB(channelB.read_url);
+								}
+
+								$("#sendA").on("click", function(event) {
+									channelB.send($("#inputA").val());
+									$("#inputA").val("");
+								});
+							});
+						});
+						
+					});
+
+
+		});
+	</script>
 </body>
 </html>
