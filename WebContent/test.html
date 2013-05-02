@@ -78,10 +78,17 @@
 								} else {
 									setupB(channelB.read_url);
 								}
-
-								$("#sendA").on("click", function(event) {
+								var sendFunc = function() {
 									channelB.send($("#inputA").val());
 									$("#inputA").val("");
+								}
+								$("#sendA").on("click", function(event) {
+									sendFunc();
+								});
+								$("#inputA").keypress(function(e) {
+									if (e.which == 13) {
+										sendFunc();										
+									}
 								});
 							});
 						});
