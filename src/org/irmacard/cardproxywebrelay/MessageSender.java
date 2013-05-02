@@ -19,7 +19,7 @@ public class MessageSender implements Runnable{
 	protected HashMap<String,HttpServletResponse> connectionMap = new HashMap<String,HttpServletResponse>();
 	
 	private static MessageSender instance = null;
-	
+	private Object signal = new Object();
 	public MessageSender() {
 		
 	}
@@ -43,41 +43,42 @@ public class MessageSender implements Runnable{
 	@Override
 	public void run() {
 		while (running) {
-			if (channelMessages.size() == 0) {
-				try {
-					synchronized (channelMessages) {
-						channelMessages.wait();
-					}
-				} catch(InterruptedException e) {
-					// Ignore
+			try {
+				synchronized (signal) {
+					signal.wait();
 				}
+			} catch(InterruptedException e) {
+				// Ignore
 			}
+			Message[] pendingChannelMessages = null;
+			synchronized (channelMessages) {
+				pendingChannelMessages = channelMessages.toArray(new Message[0]);
+				channelMessages.clear();
+			}
+			for (Message message : pendingChannelMessages) {
+				boolean messageSent = false;
+				synchronized (connectionMap) {
 
-			synchronized (connectionMap) {
-				Message[] pendingChannelMessages = null;
-				synchronized (channelMessages) {
-					pendingChannelMessages = channelMessages.toArray(new Message[0]);
-					channelMessages.clear();
-				}
-				for (Message message : pendingChannelMessages) {
 					HttpServletResponse response = connectionMap.get(message.channelID);
-					if (response == null) {
-						// There is no one listening for that channel right now, let's put
-						// it back in the queue
-						synchronized (channelMessages) {
-							channelMessages.add(message);
-						}
-					} else {
+					if (response != null) {
 						try {
 							response.getOutputStream().write(message.message);
 							response.getOutputStream().close();
+							// also remove it from the connectionMap, otherwise we have
+							// trouble if there are more messages for this channel in the queue
+							connectionMap.remove(message.channelID);
+							messageSent = true;
 						} catch (IOException e) {
-							// Maybe try again? Let's put it back into the queue
-							synchronized (channelMessages) {
-								channelMessages.add(message);
-							}
+							// messageSent will remain false, so message will be put back into
+							// the queue
 							e.printStackTrace();
 						}
+					}
+				}
+				if (!messageSent) {
+					// Apparently the message was not sent, let's put it back in the queue
+					synchronized (channelMessages) {
+						channelMessages.add(message);
 					}
 				}
 			}
@@ -101,7 +102,9 @@ public class MessageSender implements Runnable{
 	private void send(String channelID, byte[] message) {
 		synchronized (channelMessages) {
 			channelMessages.add(new Message(channelID, message));
-			channelMessages.notify();
+		}
+		synchronized (signal) {
+			signal.notify();
 		}
 	}
 
@@ -115,14 +118,17 @@ public class MessageSender implements Runnable{
             if (oldConnection != null) {
             	// If there is already someone listening, stop that and replace it
             	// with the new one.
-            	oldConnection.reset();
+//            	oldConnection.reset();
+            	System.out.println("****>There is already one there!");
             }
+        	// If there is already someone listening, simply replace it
+        	// with the new one.            
             connectionMap.put(channelID, connection);
 		}
-		synchronized (channelMessages) {
+		synchronized (signal) {
 			// A new listener has been added, maybe there are messages for it, so
-			// wake up the thread sending out messages.
-			channelMessages.notify();
+			// wake up the thread sending out messages.			
+			signal.notify();
 		}
 	}
 	
@@ -130,16 +136,19 @@ public class MessageSender implements Runnable{
 		getInstance().addListener(channelID, connection);
 	}
 	
-	private void removeListener(String channelID) {
+	private void removeListener(String channelID, HttpServletResponse connection) {
 		synchronized (connectionMap) {
-			connectionMap.remove(channelID);
+			// Only remove it when it is actually the same one, there could already
+			// be a new one!
+			HttpServletResponse c = connectionMap.get(channelID);
+			if (c != null && c.equals(connection)) {
+				connectionMap.remove(channelID);
+			}
 		}
 	}
-	public static void RemoveListener(String channelID) {
-		getInstance().removeListener(channelID);
+	public static void RemoveListener(String channelID, HttpServletResponse connection) {
+		getInstance().removeListener(channelID, connection);
 	}
-	
-	
     
     public class Message {
     	String channelID;
