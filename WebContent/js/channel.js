@@ -8,7 +8,7 @@ var Channel = function() {
 				$.ajax({
 					type : "GET",
 					url : thisReadURL,
-
+					dataType: "text",
 					async : true, /* If set to non-async, browser shows page as "Loading.."*/
 					cache : false,
 					timeout : 50000, /* Timeout in ms */
