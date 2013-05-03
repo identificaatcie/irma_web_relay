@@ -1,0 +1,8 @@
+Quick Setup
+-----------
+
+ 1. Make sure you enabled the NIO connector in your Tomcat server. If you are running it using Eclipse, got to <WORKSPACE>/Servers/Tomcat v6.0 Server at localhost-config/ and edit servers.xml. Find the port 8080 connector line and change it to:
+
+        <Connector connectionTimeout="20000" port="8080" protocol="org.apache.coyote.http11.Http11NioProtocol" redirectPort="8443"/>
+
+   This makes Eclipse unhappy, so go to the Navigator Pane, selects Servers, select the above directory, and hit refresh.
