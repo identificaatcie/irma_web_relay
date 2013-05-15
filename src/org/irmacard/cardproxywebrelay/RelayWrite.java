@@ -25,7 +25,7 @@ import net.glxn.qrgen.image.ImageType;
  */
 public class RelayWrite extends HttpServlet {
 	private static final long serialVersionUID = 1L;
-	private static final int MAXMESSAGESIZE = 2048;
+	private static final int MAXMESSAGESIZE = 4094;
 	private static final int CHANNELIDSIZE = 8; // size in bytes
 	private static final String RELAYWRITESUBPATH = "/w"; // Note, if changed, also change web.xml!
 	private static final String RELAYREADSUBPATH = "/r"; // Note, if changed, also change web.xml!
@@ -124,10 +124,17 @@ public class RelayWrite extends HttpServlet {
 				throw new ServletException("Message too big, max size: " + MAXMESSAGESIZE);
 			}
 			byte[] buffer = new byte[contentLength];
-			int bytesRead = request.getInputStream().read(buffer);
-			if (bytesRead > 0) {
-				MessageSender.Send(channelID, buffer);
+			int bytesRead;
+			int offset = 0;
+			while ((bytesRead = request.getInputStream().read(buffer, offset,
+					contentLength - offset)) != -1) {
+				offset += bytesRead;
 			}
+			if(offset != contentLength) {
+				throw new ServletException("Reading all bytes failed: (read = "
+						+ offset + ", total = " + contentLength + ")");
+			}
+			MessageSender.Send(channelID, buffer);
 		} else {
 			// An unexpected URL, throw a 404
 			response.sendError(HttpServletResponse.SC_NOT_FOUND);
