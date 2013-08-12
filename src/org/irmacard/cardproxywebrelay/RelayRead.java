@@ -39,20 +39,27 @@ public class RelayRead extends HttpServlet implements CometProcessor {
     }
     
 	/**
+	 * Read requests are of the form /r/channelid/side
      * @throws IOException 
 	 * @see CometProcessor#event(CometEvent)
      */
     public void event(CometEvent event) throws IOException {
     	String path = event.getHttpServletRequest().getPathInfo();
-    	String channelID = path.substring(1);
+
+    	String [] pathParts = Utils.parsePath(path);
+    	String channelID = pathParts[0];
+    	String side = pathParts[1];
+
         HttpServletResponse response = event.getHttpServletResponse();
         if (event.getEventType() == CometEvent.EventType.BEGIN) {
-            MessageSender.AddListener(channelID, response);
+        	System.out.println("Channel with id " + channelID + "##" + side + " connected");
+            MessageSender.AddListener(channelID, side, response);
         } else if (event.getEventType() == CometEvent.EventType.ERROR) {
-        	MessageSender.RemoveListener(channelID, response);
+        	MessageSender.RemoveListener(channelID, side, response);
             event.close();
         } else if (event.getEventType() == CometEvent.EventType.END) {
-            MessageSender.RemoveListener(channelID, response);
+        	System.out.println("Channel with id " + channelID + "##" + side + " disconnected");
+            MessageSender.RemoveListener(channelID, side, response);
             event.close();
         } else if (event.getEventType() == CometEvent.EventType.READ) {
         	// This event is not used at the moment

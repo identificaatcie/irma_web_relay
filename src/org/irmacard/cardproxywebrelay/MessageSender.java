@@ -18,6 +18,9 @@ public class MessageSender implements Runnable{
 	protected ArrayList<Message> channelMessages = new ArrayList<Message>();
 	protected HashMap<String,HttpServletResponse> connectionMap = new HashMap<String,HttpServletResponse>();
 	
+	public static String SIDE_A = "a";
+	public static String SIDE_B = "b";
+
 	private static MessageSender instance = null;
 	private Object signal = new Object();
 	public MessageSender() {
@@ -47,26 +50,28 @@ public class MessageSender implements Runnable{
 				synchronized (signal) {
 					signal.wait();
 				}
+				System.out.println("Woke up due to signal!");
 			} catch(InterruptedException e) {
 				// Ignore
 			}
 			Message[] pendingChannelMessages = null;
 			synchronized (channelMessages) {
 				pendingChannelMessages = channelMessages.toArray(new Message[0]);
+				System.out.println("" + pendingChannelMessages.length + " pending messages");
 				channelMessages.clear();
 			}
 			for (Message message : pendingChannelMessages) {
 				boolean messageSent = false;
 				synchronized (connectionMap) {
 
-					HttpServletResponse response = connectionMap.get(message.channelID);
+					HttpServletResponse response = connectionMap.get(makeChannelId(message.channelID, message.toSide));
 					if (response != null) {
 						try {
 							response.getOutputStream().write(message.message);
 							response.getOutputStream().close();
 							// also remove it from the connectionMap, otherwise we have
 							// trouble if there are more messages for this channel in the queue
-							connectionMap.remove(message.channelID);
+							connectionMap.remove(makeChannelId(message.channelID, message.toSide));
 							messageSent = true;
 						} catch (IOException e) {
 							// messageSent will remain false, so message will be put back into
@@ -76,7 +81,12 @@ public class MessageSender implements Runnable{
 					}
 				}
 				if (!messageSent) {
-					// Apparently the message was not sent, let's put it back in the queue
+					// Apparently the message was not sent, let's put it back in
+					// the queue
+					System.out.println("Sending message <<"
+							+ new String(message.message) + ">> on channel "
+							+ makeChannelId(message.channelID, message.toSide)
+							+ " still pending");
 					synchronized (channelMessages) {
 						channelMessages.add(message);
 					}
@@ -99,31 +109,35 @@ public class MessageSender implements Runnable{
 		return instance;
 	}
 	
-	private void send(String channelID, byte[] message) {
+	private void send(String channelID, String fromSide, byte[] message) {
 		synchronized (channelMessages) {
-			channelMessages.add(new Message(channelID, message));
+			String toSide = fromSide.equals(SIDE_A) ? SIDE_B : SIDE_A;
+			//System.out.println("Message <<" + new String(message) + ">> on channel " + channelID + " to side " + toSide);
+			channelMessages.add(new Message(channelID, toSide, message));
 		}
 		synchronized (signal) {
 			signal.notify();
 		}
 	}
 
-	public static void Send(String channelID, byte[] message) {
-		getInstance().send(channelID, message);
+	public static void Send(String channelID, String fromSide, byte[] message) {
+		getInstance().send(channelID, fromSide, message);
 	}
 	
-	private void addListener(String channelID, HttpServletResponse connection) throws IOException {
+	private void addListener(String channel, String side, HttpServletResponse connection) throws IOException {
 		synchronized (connectionMap) {
-			HttpServletResponse oldConnection = connectionMap.get(channelID);
-            if (oldConnection != null) {
+			HttpServletResponse oldConnection = connectionMap.get(makeChannelId(channel, side));
+
+			if (oldConnection != null) {
             	// If there is already someone listening, stop that and replace it
             	// with the new one.
 //            	oldConnection.reset();
-            	System.out.println("****>There is already one there!");
+            	System.out.println("****> There is already one there!");
             }
-        	// If there is already someone listening, simply replace it
+
+			// If there is already someone listening, simply replace it
         	// with the new one.            
-            connectionMap.put(channelID, connection);
+            connectionMap.put(makeChannelId(channel, side), connection);
 		}
 		synchronized (signal) {
 			// A new listener has been added, maybe there are messages for it, so
@@ -132,29 +146,35 @@ public class MessageSender implements Runnable{
 		}
 	}
 	
-	public static void AddListener(String channelID, HttpServletResponse connection) throws IOException {
-		getInstance().addListener(channelID, connection);
+	public static void AddListener(String channelID, String side, HttpServletResponse connection) throws IOException {
+		getInstance().addListener(channelID, side, connection);
 	}
 	
-	private void removeListener(String channelID, HttpServletResponse connection) {
+	private void removeListener(String channel, String side, HttpServletResponse connection) {
 		synchronized (connectionMap) {
 			// Only remove it when it is actually the same one, there could already
 			// be a new one!
-			HttpServletResponse c = connectionMap.get(channelID);
+			HttpServletResponse c = connectionMap.get(makeChannelId(channel, side));
 			if (c != null && c.equals(connection)) {
-				connectionMap.remove(channelID);
+				connectionMap.remove(makeChannelId(channel, side));
 			}
 		}
 	}
-	public static void RemoveListener(String channelID, HttpServletResponse connection) {
-		getInstance().removeListener(channelID, connection);
+	public static void RemoveListener(String channel, String side, HttpServletResponse connection) {
+		getInstance().removeListener(channel, side, connection);
+	}
+	
+	private String makeChannelId(String channel, String side) {
+		return channel + "##" + side;
 	}
     
     public class Message {
     	String channelID;
+    	String toSide;
     	byte[] message;
-    	Message(String channelID, byte[] message) {
+    	Message(String channelID, String toSide, byte[] message) {
     		this.channelID = channelID;
+    		this.toSide = toSide;
     		this.message = message;
     	}
     }

@@ -29,4 +29,14 @@
     <servlet-name>RelayWrite</servlet-name>
     <url-pattern>/w/*</url-pattern>
   </servlet-mapping>
+    <servlet>
+    <description></description>
+    <display-name>ChannelCreator</display-name>
+    <servlet-name>ChannelCreator</servlet-name>
+    <servlet-class>org.irmacard.cardproxywebrelay.ChannelCreator</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>ChannelCreator</servlet-name>
+    <url-pattern>/create/*</url-pattern>
+  </servlet-mapping>
 </web-app>
