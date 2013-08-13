@@ -11,18 +11,21 @@ import javax.servlet.http.HttpServletResponse;
  * A class for relaying messages from the RelayWrite servlet to the RelayRead servlet.
  * 
  * @author Maarten Everts <maarten.everts@tno.nl>
+ * @author Wouter Lueks <lueks@cs.ru.nl>
  *
  */
 public class MessageSender implements Runnable{
 	protected boolean running = true;
 	protected ArrayList<Message> channelMessages = new ArrayList<Message>();
 	protected HashMap<String,HttpServletResponse> connectionMap = new HashMap<String,HttpServletResponse>();
+	protected HashMap<String, ChannelStatus> channelStatusMap = new HashMap<String, ChannelStatus>();
 	
 	public static String SIDE_A = "a";
 	public static String SIDE_B = "b";
 
 	private static MessageSender instance = null;
 	private Object signal = new Object();
+
 	public MessageSender() {
 		
 	}
@@ -54,6 +57,16 @@ public class MessageSender implements Runnable{
 			} catch(InterruptedException e) {
 				// Ignore
 			}
+
+			// FIXME: We shouldn't tick on every small piece of activity, but
+			// schedule this separately
+			synchronized(channelStatusMap) {
+				for(ChannelStatus c : channelStatusMap.values()) {
+					c.tick();
+					System.out.println(c);
+				}
+			}
+
 			Message[] pendingChannelMessages = null;
 			synchronized (channelMessages) {
 				pendingChannelMessages = channelMessages.toArray(new Message[0]);
@@ -139,6 +152,12 @@ public class MessageSender implements Runnable{
         	// with the new one.            
             connectionMap.put(makeChannelId(channel, side), connection);
 		}
+
+		synchronized(channelStatusMap) {
+            // Update channel status.
+			channelStatusMap.get(channel).activity(side);
+		}
+
 		synchronized (signal) {
 			// A new listener has been added, maybe there are messages for it, so
 			// wake up the thread sending out messages.			
@@ -167,7 +186,16 @@ public class MessageSender implements Runnable{
 	private String makeChannelId(String channel, String side) {
 		return channel + "##" + side;
 	}
-    
+
+	private void addChannel(String channel) {
+		synchronized (channelStatusMap) {
+			channelStatusMap.put(channel, new ChannelStatus(channel));
+		}
+	}
+	public static void AddChannel(String channel) {
+		getInstance().addChannel(channel);
+	}
+
     public class Message {
     	String channelID;
     	String toSide;
