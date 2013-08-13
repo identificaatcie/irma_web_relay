@@ -3,9 +3,10 @@ package org.irmacard.cardproxywebrelay;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Vector;
 
 import javax.servlet.http.HttpServletResponse;
-
 
 /**
  * A class for relaying messages from the RelayWrite servlet to the RelayRead servlet.
@@ -22,15 +23,15 @@ public class MessageSender implements Runnable{
 	
 	public static String SIDE_A = "a";
 	public static String SIDE_B = "b";
+	public static String TIMEOUT_MESSAGE = "{\"name\":\"timeout\",\"type\":\"event\",\"id\":\"0\"}";
 
 	private static MessageSender instance = null;
+	private static Maintenance maintenanceInstance;
 	private Object signal = new Object();
 
 	public MessageSender() {
-		
 	}
-	
-	
+
     public void stop() {
         running = false;
         channelMessages.clear();
@@ -44,6 +45,11 @@ public class MessageSender implements Runnable{
     		instance.stop();
     		instance = null;
     	}
+
+    	if (maintenanceInstance != null) {
+    		maintenanceInstance.stop();
+    		maintenanceInstance = null;
+    	}
     }
     
 	@Override
@@ -56,15 +62,6 @@ public class MessageSender implements Runnable{
 				System.out.println("Woke up due to signal!");
 			} catch(InterruptedException e) {
 				// Ignore
-			}
-
-			// FIXME: We shouldn't tick on every small piece of activity, but
-			// schedule this separately
-			synchronized(channelStatusMap) {
-				for(ChannelStatus c : channelStatusMap.values()) {
-					c.tick();
-					System.out.println(c);
-				}
 			}
 
 			Message[] pendingChannelMessages = null;
@@ -113,6 +110,11 @@ public class MessageSender implements Runnable{
 		Thread messageSenderThread = new Thread(instance, "MessageSender");
 		messageSenderThread.setDaemon(true);
 		messageSenderThread.start();
+
+		maintenanceInstance = new Maintenance();
+		Thread maintenanceThread = new Thread(maintenanceInstance, "MessageSender#Maintenance");
+		maintenanceThread.setDaemon(true);
+		maintenanceThread.start();
 	}
 	
 	private static MessageSender getInstance() {
@@ -194,6 +196,37 @@ public class MessageSender implements Runnable{
 	}
 	public static void AddChannel(String channel) {
 		getInstance().addChannel(channel);
+	}
+
+	private void tick() {
+		synchronized(channelStatusMap) {
+			List<String> deadChannels = new Vector<String>();
+			for(ChannelStatus c : channelStatusMap.values()) {
+				c.tick();
+
+				// If timeout, put messages in the queue to send out notifications
+				if(c.shouldBeNotified()) {
+					System.out.println("Sending timeouts for channel " + c.toString());
+					c.setNotified();
+					send(c.getChannelID(), SIDE_A, TIMEOUT_MESSAGE.getBytes());
+					send(c.getChannelID(), SIDE_B, TIMEOUT_MESSAGE.getBytes());
+				}
+
+				// If completely idle for too long, remove it from the queue
+				if(c.dead()) {
+					System.out.println("Garbage collecting: " + c.toString());
+					deadChannels.add(c.getChannelID());
+				}
+			}
+
+			for(String c : deadChannels) {
+				channelStatusMap.remove(c);
+			}
+		}
+	}
+
+	public static void Tick() {
+		getInstance().tick();
 	}
 
     public class Message {

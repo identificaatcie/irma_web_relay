@@ -31,12 +31,22 @@ public class ChannelStatus {
 	 */
 	public static final long TIMEOUT = 60000l;
 
+	/**
+	 * Time in ms after which connection can be garbage collected.
+	 */
+	public static final long DEAD_TIME = 3 * 60 * 1000;
+
 	private ChannelState channelState;
 	private ConnectionState sideAState;
 	private ConnectionState sideBState;
 
 	private Date lastSeenSideA;
 	private Date lastSeenSideB;
+
+	/**
+	 * Is set when timeout notification has been queued.
+	 */
+	private boolean notified = false;
 
 	private String channelID;
 
@@ -118,6 +128,28 @@ public class ChannelStatus {
 		}
 	}
 
+	public boolean dead() {
+		return channelState == ChannelState.BOTH_LOST
+				&& (lastSeenSideA != null && new Date().getTime()
+						- lastSeenSideA.getTime() > DEAD_TIME)
+				&& (lastSeenSideB != null && new Date().getTime()
+						- lastSeenSideB.getTime() > DEAD_TIME);
+	}
+
+	public void setNotified() {
+		notified = true;
+	}
+
+	private boolean isNotified() {
+		return notified;
+	}
+
+	public boolean shouldBeNotified() {
+		return !isNotified()
+				&& (channelState == ChannelState.FIRST_LOST
+				    || channelState == ChannelState.BOTH_LOST);
+	}
+
 	public String toString() {
 		String state = "";
 
@@ -154,5 +186,9 @@ public class ChannelStatus {
 		return "Channel " + channelID + ": " + state + " (side A inactive: "
 				+ sideAInactive + " s, side B inactive: " + sideBInactive
 				+ " s)";
+	}
+
+	public String getChannelID() {
+		return channelID;
 	}
 }
