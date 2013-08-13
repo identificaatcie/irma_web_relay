@@ -8,7 +8,7 @@ package org.irmacard.cardproxywebrelay;
 public class Maintenance implements Runnable {
 	protected boolean running = false;
 
-	private final long INTERVAL = 60 * 1000l;
+	private final long INTERVAL = 30 * 1000l;
 
 	@Override
 	public void run() {

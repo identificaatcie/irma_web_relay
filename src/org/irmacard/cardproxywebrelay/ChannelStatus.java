@@ -130,9 +130,9 @@ public class ChannelStatus {
 
 	public boolean dead() {
 		return channelState == ChannelState.BOTH_LOST
-				&& (lastSeenSideA != null && new Date().getTime()
+				&& (lastSeenSideA == null || new Date().getTime()
 						- lastSeenSideA.getTime() > DEAD_TIME)
-				&& (lastSeenSideB != null && new Date().getTime()
+				&& (lastSeenSideB == null || new Date().getTime()
 						- lastSeenSideB.getTime() > DEAD_TIME);
 	}
 

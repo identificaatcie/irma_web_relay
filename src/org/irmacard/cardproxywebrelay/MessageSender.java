@@ -93,7 +93,7 @@ public class MessageSender implements Runnable{
 				if (!messageSent) {
 					// Apparently the message was not sent, let's put it back in
 					// the queue
-					System.out.println("Sending message <<"
+					System.out.println("Message <<"
 							+ new String(message.message) + ">> on channel "
 							+ makeChannelId(message.channelID, message.toSide)
 							+ " still pending");
@@ -127,7 +127,7 @@ public class MessageSender implements Runnable{
 	private void send(String channelID, String fromSide, byte[] message) {
 		synchronized (channelMessages) {
 			String toSide = fromSide.equals(SIDE_A) ? SIDE_B : SIDE_A;
-			//System.out.println("Message <<" + new String(message) + ">> on channel " + channelID + " to side " + toSide);
+			System.out.println("Message <<" + new String(message) + ">> on channel " + channelID + " to side " + toSide);
 			channelMessages.add(new Message(channelID, toSide, message));
 		}
 		synchronized (signal) {
@@ -157,7 +157,9 @@ public class MessageSender implements Runnable{
 
 		synchronized(channelStatusMap) {
             // Update channel status.
-			channelStatusMap.get(channel).activity(side);
+			ChannelStatus cs = channelStatusMap.get(channel);
+			if(cs != null)
+				cs.activity(side);
 		}
 
 		synchronized (signal) {
@@ -199,10 +201,12 @@ public class MessageSender implements Runnable{
 	}
 
 	private void tick() {
+		List<String> deadChannels = new Vector<String>();
+
 		synchronized(channelStatusMap) {
-			List<String> deadChannels = new Vector<String>();
 			for(ChannelStatus c : channelStatusMap.values()) {
 				c.tick();
+				System.out.println(c);
 
 				// If timeout, put messages in the queue to send out notifications
 				if(c.shouldBeNotified()) {
@@ -222,6 +226,21 @@ public class MessageSender implements Runnable{
 			for(String c : deadChannels) {
 				channelStatusMap.remove(c);
 			}
+		}
+
+		// Remove all pending messages of dead channels
+		synchronized(channelMessages) {
+			List<Message> toPurgeMessages = new Vector<Message>();
+
+			for(Message m : channelMessages) {
+				for(String channelId : deadChannels) {
+					if(m.channelID.equals(channelId)) {
+						toPurgeMessages.add(m);
+					}
+				}
+			}
+
+			channelMessages.removeAll(toPurgeMessages);
 		}
 	}
 
