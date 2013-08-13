@@ -59,7 +59,6 @@ public class MessageSender implements Runnable{
 				synchronized (signal) {
 					signal.wait();
 				}
-				System.out.println("Woke up due to signal!");
 			} catch(InterruptedException e) {
 				// Ignore
 			}
@@ -67,7 +66,6 @@ public class MessageSender implements Runnable{
 			Message[] pendingChannelMessages = null;
 			synchronized (channelMessages) {
 				pendingChannelMessages = channelMessages.toArray(new Message[0]);
-				System.out.println("" + pendingChannelMessages.length + " pending messages");
 				channelMessages.clear();
 			}
 			for (Message message : pendingChannelMessages) {
@@ -93,10 +91,6 @@ public class MessageSender implements Runnable{
 				if (!messageSent) {
 					// Apparently the message was not sent, let's put it back in
 					// the queue
-					System.out.println("Message <<"
-							+ new String(message.message) + ">> on channel "
-							+ makeChannelId(message.channelID, message.toSide)
-							+ " still pending");
 					synchronized (channelMessages) {
 						channelMessages.add(message);
 					}
@@ -127,7 +121,6 @@ public class MessageSender implements Runnable{
 	private void send(String channelID, String fromSide, byte[] message) {
 		synchronized (channelMessages) {
 			String toSide = fromSide.equals(SIDE_A) ? SIDE_B : SIDE_A;
-			System.out.println("Message <<" + new String(message) + ">> on channel " + channelID + " to side " + toSide);
 			channelMessages.add(new Message(channelID, toSide, message));
 		}
 		synchronized (signal) {
@@ -141,15 +134,6 @@ public class MessageSender implements Runnable{
 	
 	private void addListener(String channel, String side, HttpServletResponse connection) throws IOException {
 		synchronized (connectionMap) {
-			HttpServletResponse oldConnection = connectionMap.get(makeChannelId(channel, side));
-
-			if (oldConnection != null) {
-            	// If there is already someone listening, stop that and replace it
-            	// with the new one.
-//            	oldConnection.reset();
-            	System.out.println("****> There is already one there!");
-            }
-
 			// If there is already someone listening, simply replace it
         	// with the new one.            
             connectionMap.put(makeChannelId(channel, side), connection);
@@ -206,11 +190,10 @@ public class MessageSender implements Runnable{
 		synchronized(channelStatusMap) {
 			for(ChannelStatus c : channelStatusMap.values()) {
 				c.tick();
-				System.out.println(c);
 
 				// If timeout, put messages in the queue to send out notifications
 				if(c.shouldBeNotified()) {
-					System.out.println("Sending timeouts for channel " + c.toString());
+					System.out.println("Sending timeouts for: " + c.toString());
 					c.setNotified();
 					send(c.getChannelID(), SIDE_A, TIMEOUT_MESSAGE.getBytes());
 					send(c.getChannelID(), SIDE_B, TIMEOUT_MESSAGE.getBytes());

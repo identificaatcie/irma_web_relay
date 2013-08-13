@@ -52,14 +52,12 @@ public class RelayRead extends HttpServlet implements CometProcessor {
 
         HttpServletResponse response = event.getHttpServletResponse();
         if (event.getEventType() == CometEvent.EventType.BEGIN) {
-        	System.out.println("Channel with id " + channelID + "##" + side + " connected");
-            MessageSender.AddListener(channelID, side, response);
+        	MessageSender.AddListener(channelID, side, response);
         } else if (event.getEventType() == CometEvent.EventType.ERROR) {
         	MessageSender.RemoveListener(channelID, side, response);
             event.close();
         } else if (event.getEventType() == CometEvent.EventType.END) {
-        	System.out.println("Channel with id " + channelID + "##" + side + " disconnected");
-            MessageSender.RemoveListener(channelID, side, response);
+        	MessageSender.RemoveListener(channelID, side, response);
             event.close();
         } else if (event.getEventType() == CometEvent.EventType.READ) {
         	// This event is not used at the moment
