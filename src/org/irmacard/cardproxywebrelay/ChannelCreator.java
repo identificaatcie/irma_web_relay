@@ -81,13 +81,14 @@ public class ChannelCreator extends HttpServlet {
 		if (pathParts.length == 0) {
 			// A create channel request
 			String channelID = generateChannelID();
+			String baseURL = Utils.getBaseURL(request);
 			
 			ChannelCreationResponse creationResponse = new ChannelCreationResponse();
-			creationResponse.side_a_read_url = Utils.getBaseURL(request) + RELAYREADSUBPATH + "/" + channelID + "/" + MessageSender.SIDE_A;
-			creationResponse.side_a_write_url = Utils.getBaseURL(request) + RELAYWRITESUBPATH + "/" + channelID + "/" + MessageSender.SIDE_A;
-			creationResponse.side_b_read_url = Utils.getBaseURL(request) + RELAYREADSUBPATH + "/" + channelID + "/" + MessageSender.SIDE_B;
-			creationResponse.side_b_write_url = Utils.getBaseURL(request) + RELAYWRITESUBPATH + "/" + channelID + "/" + MessageSender.SIDE_B;
-			creationResponse.qr_url = Utils.getBaseURL(request) + RELAYCREATESUBPATH + "/qr/" + channelID + "/" + MessageSender.SIDE_B;
+			creationResponse.side_a_read_url = baseURL + RELAYREADSUBPATH + "/" + channelID + "/" + MessageSender.SIDE_A;
+			creationResponse.side_a_write_url = baseURL + RELAYWRITESUBPATH + "/" + channelID + "/" + MessageSender.SIDE_A;
+			creationResponse.side_b_read_url = baseURL + RELAYREADSUBPATH + "/" + channelID + "/" + MessageSender.SIDE_B;
+			creationResponse.side_b_write_url = baseURL + RELAYWRITESUBPATH + "/" + channelID + "/" + MessageSender.SIDE_B;
+			creationResponse.qr_url = baseURL + RELAYCREATESUBPATH + "/qr/" + channelID + "/" + MessageSender.SIDE_B;
 			
 			MessageSender.AddChannel(channelID);
 			
