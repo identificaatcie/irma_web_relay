@@ -4,12 +4,17 @@ import javax.servlet.http.HttpServletRequest;
 
 public class Utils {
     public static String getBaseURL(HttpServletRequest request) {
-    	String result = request.getScheme() + "://" + request.getServerName();
-    	if (request.getServerPort() != 80) {
-    		result += ":" + request.getServerPort();
+    	String baseURL = null;
+    	
+    	String fwdURL = request.getHeader("X-Forwarded-URL");
+    	if (fwdURL != null) {
+    		System.out.println("Behind proxy, accessed using URL: " + fwdURL + " (stripping " + request.getServletPath() + " for baseURL).");
+   			baseURL = fwdURL.substring(0, fwdURL.indexOf(request.getServletPath()));
+    	} else {
+    		baseURL = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort() + request.getContextPath();
     	}
-    	result += request.getContextPath();
-    	return result;
+    	
+    	return baseURL;
     }
 	
 	public static String[] parsePath(String pathInfo) {

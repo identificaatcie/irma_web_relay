@@ -16,8 +16,9 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 /**
- * A servlet setting up a new channel that runs through the proxy. Please be aware that this
- * servlet needs to have some knowledge of the url structure used by this application.
+ * A servlet setting up a new channel that runs through the proxy. Please be 
+ * aware that this servlet needs to have some knowledge of the url structure 
+ * used by this application.
  * 
  * @author Wouter Lueks <lueks@cs.ru.nl>
  * @author Maarten Everts <maarten.everts@tno.nl>
