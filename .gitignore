@@ -2,3 +2,4 @@ build/
 bin/
 deploy.credentials
 *.war
+target/
