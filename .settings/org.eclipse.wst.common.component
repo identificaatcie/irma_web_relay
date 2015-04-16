@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?><project-modules id="moduleCoreId" project-version="1.5.0">
-    <wb-module deploy-name="cardproxy_web_relay">
-        <wb-resource deploy-path="/" source-path="/WebContent" tag="defaultRootSource"/>
-        <wb-resource deploy-path="/WEB-INF/classes" source-path="/src"/>
-        <property name="context-root" value="cardproxy_web_relay"/>
-        <property name="java-output-path" value="/cardproxy_web_relay/build/classes"/>
-    </wb-module>
-</project-modules>
